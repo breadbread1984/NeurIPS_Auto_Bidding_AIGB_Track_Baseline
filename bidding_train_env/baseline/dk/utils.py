@@ -32,9 +32,9 @@ class EpisodeReplayBuffer(Dataset):
   def discount_cumsum(self, x, gamma = 0.8):
     x = np.array(x)
     discount_cumsum = np.zeros_like(x)
-    discount_cumsum[-1] = 0
+    discount_cumsum[-1] = x[-1]
     for t in reversed(range(x.shape[0] - 1)):
-      discount_cumsum[t] = x[t + 1] + gamma * discount_cumsum[t + 1]
+      discount_cumsum[t] = x[t] + gamma * discount_cumsum[t + 1]
     return discount_cumsum
   def __len__(self):
     return len(self.states)

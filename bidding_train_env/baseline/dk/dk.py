@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+from os import mkdir
+from os.path import join, exists, isdir
 import torch
 from torch import nn
 from torch.optim import AdamW
@@ -158,15 +160,31 @@ class DecisionKAN(nn.Module):
     inputs = torch.cat([states, actions_pred], dim = -1) # inputs.shape = (batch, state_dim + act_dim)
     returns_to_go_best, regularizer3 = self.Q(inputs) # returns_to_go_best.shape = (batch, 1)
     pi_loss = -torch.mean(returns_to_go_best)
-    loss = q_loss + pi_loss + regularizer1 + regularizer2 + regularizer3
+    loss = q_loss + pi_loss + regularizer1 + regularizer1 + regularizer2 + regularizer3
     self.optimizer.zero_grad()
     loss.backward()
     nn.utils.clip_grad_norm_(self.parameters(), .25)
     self.optimizer.step()
     return loss.detach().cpu().item()
   def take_actions(self, state, target_return = None, pre_reward = None):
-    action = self.get_action()
-    #TODO
+    self.eval()
+    action = self.get_action(state)
+    action = action.detach().cpu().numpy()
+    return action
+  def save_net(self, save_path):
+    if not exists(save_path):
+      mkdir(save_path)
+    file_path = join(save_path, 'dt.pt')
+    torch.save(self.state_dict(), file_path)
+  def save_jit(self, save_path):
+    if not isdir(save_path):
+      mkdir(save_path)
+    jit_model = torch.jit.script(self.cpu())
+    torch.jit.save(jit_model, f'{save_path}/dt_model.pth')
+  def load_net(self, load_path = 'saved_model/DTtest', device = 'cpu'):
+    file_path = load_path
+    self.load_state_dict(torch.load(file_path, map_location = device))
+    print(f"Model loaded from {self.device}.")
 
 if __name__ == "__main__":
   layer = KANLayer(3,2)
