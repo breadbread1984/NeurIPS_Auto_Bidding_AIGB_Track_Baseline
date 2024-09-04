@@ -20,7 +20,7 @@ class EpisodeReplayBuffer(Dataset):
         self.dones.append(row['done'])
         traj_len += 1
         if row['done'] != 0:
-          returns_to_go = discount_cumsum(self.rewards[-traj_len:])
+          returns_to_go = self.discount_cumsum(self.rewards[-traj_len:])
           self.returns_to_go.extend(returns_to_go.tolist())
           traj_len = 0
     self.states = np.stack(self.states, axis = 0) # self.states.shape = (sample_num, state_dim)
@@ -44,8 +44,12 @@ class EpisodeReplayBuffer(Dataset):
       'next_state': self.next_states[i],
       'reward': self.rewards[i],
       'action': self.actions[i],
-      'returns_to_go': self.returns_to_go[i]
+      'returns_to_go': self.returns_to_go[i],
+      'done': self.dones[i]
     }
 
 if __name__ == "__main__":
-  data = EpisodeReplayBuffer('')
+  data = EpisodeReplayBuffer('../../../data/trajectory/trajectory_data.csv')
+  for example in data:
+    print(example)
+    if example['done'] != 0: break
