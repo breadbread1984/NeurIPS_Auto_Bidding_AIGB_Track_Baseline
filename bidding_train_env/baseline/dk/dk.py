@@ -174,14 +174,14 @@ class DecisionKAN(nn.Module):
   def save_net(self, save_path):
     if not exists(save_path):
       mkdir(save_path)
-    file_path = join(save_path, 'dt.pt')
+    file_path = join(save_path, 'dk.pt')
     torch.save(self.state_dict(), file_path)
   def save_jit(self, save_path):
     if not isdir(save_path):
       mkdir(save_path)
     jit_model = torch.jit.script(self.cpu())
-    torch.jit.save(jit_model, f'{save_path}/dt_model.pth')
-  def load_net(self, load_path = 'saved_model/DTtest', device = 'cpu'):
+    torch.jit.save(jit_model, f'{save_path}/dk_model.pth')
+  def load_net(self, load_path = 'saved_model/DKtest', device = 'cpu'):
     file_path = load_path
     self.load_state_dict(torch.load(file_path, map_location = device))
     print(f"Model loaded from {self.device}.")
