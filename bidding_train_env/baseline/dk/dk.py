@@ -166,7 +166,7 @@ class DecisionKAN(nn.Module):
     nn.utils.clip_grad_norm_(self.parameters(), .25)
     self.optimizer.step()
     return loss.detach().cpu().item()
-  def take_actions(self, state, target_return = None, pre_reward = None):
+  def take_actions(self, state):
     self.eval()
     action = self.get_action(state)
     action = action.detach().cpu().numpy()
