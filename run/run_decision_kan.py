@@ -19,7 +19,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def run_dt():
+def run_dk():
     train_model()
 
 def train_model():
@@ -52,4 +52,4 @@ def load_model():
     model.load_net("Model/DK/saved_model")
 
 if __name__ == "__main__":
-    run_dt()
+    run_dk()
