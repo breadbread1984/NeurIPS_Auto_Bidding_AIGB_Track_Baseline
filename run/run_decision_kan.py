@@ -26,7 +26,7 @@ def train_model():
     datasets = list()
     for f in listdir(join('data', 'trajectory')):
         csv_path = join('data', 'trajectory', f)
-        replay_buffer = EpisodeReplayBuffer(16, 1, csv_path)
+        replay_buffer = EpisodeReplayBuffer(csv_path)
         datasets.append(replay_buffer)
     replay_buffer = ConcateDataset(datasets)
     logger.info(f"Replay buffer size: {len(replay_buffer.trajectories)}")
