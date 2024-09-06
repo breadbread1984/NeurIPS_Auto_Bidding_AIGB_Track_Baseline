@@ -33,7 +33,7 @@ def train_model():
     model = DecisionKAN(state_dim = 16, act_dim = 1).to("cuda")
     dataloader = DataLoader(replay_buffer, batch_size = 32, shuffle = True, num_workers = 32)
     model.train()
-    for epoch in range(100):
+    for epoch in range(200):
       i = 0
       for triplet in dataloader:
           states, next_states, rewards, actions, returns_to_go, dones = \
@@ -42,7 +42,7 @@ def train_model():
           train_loss = model.step(states, next_states, rewards, actions, returns_to_go, dones)
           i += 1
           logger.info(f"Epoch: {epoch} Step: {i} Action loss: {np.mean(train_loss)}")
-          model.scheduler.step()
+      model.scheduler.step()
       model.save_net("save_model/DKtest")
 
 def load_model():

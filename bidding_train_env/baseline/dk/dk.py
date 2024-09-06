@@ -4,8 +4,8 @@ from os import mkdir
 from os.path import join, exists, isdir
 import torch
 from torch import nn
-from torch.optim import AdamW
-from torch.optim.lr_scheduler import LambdaLR
+from torch.optim import Adam
+from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
 def b_spline(x, grid, k = 0, extend = True, device = torch.device('cuda')):
   def extend_grid(grid, k_extend=0):
@@ -135,14 +135,14 @@ class KAN(nn.Module):
     return res, regularizer
 
 class DecisionKAN(nn.Module):
-  def __init__(self, state_dim, act_dim, gamma = 0.8, lr = 1e-4, weight_decay = 1e-4):
+  def __init__(self, state_dim, act_dim, gamma = 0.8, lr = 1e-4):
     super(DecisionKAN, self).__init__()
     self.gamma = gamma
     self.Q = KAN(channels = [state_dim + act_dim, 8, 4, 1], grid = 7, k = 3)
     self.pi = KAN(channels = [state_dim, 8, 4, act_dim], grid = 7, k = 3)
     self.criterion = nn.MSELoss()
-    self.optimizer = AdamW(self.parameters(), lr = lr, weight_decay = weight_decay)
-    self.scheduler = LambdaLR(self.optimizer, lambda steps: min((steps + 1) / self.warmup_steps, 1))
+    self.optimizer = Adam(self.parameters(), lr = lr)
+    self.scheduler = CosineAnnealingWarmRestarts(self.optimizer, T_0 = 5, T_mult = 2)
   def forward(self, states):
     actions_next, regularizer = self.pi(states) # actions_next.shape = (batch, 1)
     return actions_next
