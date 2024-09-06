@@ -28,7 +28,7 @@ def train_model():
         csv_path = join('data', 'trajectory', f)
         replay_buffer = EpisodeReplayBuffer(csv_path)
         datasets.append(replay_buffer)
-    replay_buffer = ConcateDataset(datasets)
+    replay_buffer = ConcatDataset(datasets)
     logger.info(f"Replay buffer size: {len(replay_buffer)}")
     model = DecisionKAN(state_dim = 16, act_dim = 1).to("cuda")
     dataloader = DataLoader(replay_buffer, batch_size = 32, shuffle = True, num_workers = 32)
