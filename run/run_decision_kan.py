@@ -37,7 +37,7 @@ def train_model():
       i = 0
       for triplet in dataloader:
           states, next_states, rewards, actions, returns_to_go, dones = \
-                triplet['states'].to('cuda'), triplet['next_states'].to('cuda'), triplet['rewards'].to('cuda') \
+                triplet['states'].to('cuda'), triplet['next_states'].to('cuda'), triplet['rewards'].to('cuda'), \
                 triplet['actions'].to('cuda'), triplet['returns_to_go'].to('cuda'), triplet['dones'].to('cuda')
           train_loss = model.step(states, next_states, rewards, actions, returns_to_go, dones)
           i += 1
