@@ -13,8 +13,8 @@ class EpisodeReplayBuffer(Dataset):
     traj_len = 0
     for chunk in pd.read_csv(csv_path, chunksize = chunksize):
       for index, row in chunk.iterrows():
-        self.states.append(np.array(row['state']))
-        self.next_states.append(np.array(row['next_state']))
+        self.states.append(np.array(eval(row['state'])))
+        self.next_states.append(np.array(eval(row['next_state'])))
         self.rewards.append(row['reward'])
         self.actions.append(row['action'])
         self.dones.append(row['done'])
