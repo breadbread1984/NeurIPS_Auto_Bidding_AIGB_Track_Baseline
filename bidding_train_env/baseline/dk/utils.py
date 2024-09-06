@@ -29,8 +29,8 @@ class EpisodeReplayBuffer(Dataset):
     self.actions = np.expand_dims(self.actions, axis = -1) # self.actions.shape = (sample_num, 1)
     self.returns_to_go = np.expand_dims(self.returns_to_go, axis = -1) # self.returns_to_go.shape = (sample_num, 1)
     self.dones = np.expand_dims(self.dones, axis = -1) # self.dones.shape = (sample_num, 1)
-    assert len(self.states) == len(self.next_states) == len(self.rewards) \
-            == len(self.actions) == len(self.returns_to_go) == len(self.dones)
+    assert self.states.shape[0] == self.next_states.shape[0] == self.rewards.shape[0] \
+            == self.actions.shape[0] == self.returns_to_go.shape[0] == self.dones.shape[0]
   def discount_cumsum(self, x, gamma = 0.8):
     x = np.array(x)
     discount_cumsum = np.zeros_like(x)
