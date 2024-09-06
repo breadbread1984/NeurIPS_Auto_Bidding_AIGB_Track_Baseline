@@ -40,12 +40,12 @@ class EpisodeReplayBuffer(Dataset):
     return len(self.states)
   def __getitem__(self, index):
     return {
-      'state': self.states[i],
-      'next_state': self.next_states[i],
-      'reward': self.rewards[i],
-      'action': self.actions[i],
+      'states': self.states[i],
+      'next_states': self.next_states[i],
+      'rewards': self.rewards[i],
+      'actions': self.actions[i],
       'returns_to_go': self.returns_to_go[i],
-      'done': self.dones[i]
+      'dones': self.dones[i]
     }
 
 if __name__ == "__main__":
