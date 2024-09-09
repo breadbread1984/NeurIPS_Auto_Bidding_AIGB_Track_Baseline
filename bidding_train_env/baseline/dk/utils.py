@@ -10,7 +10,7 @@ from bisect import bisect
 class EpisodeReplayBuffer(Dataset):
   def __init__(self, csv_path, chunksize = 1000):
     super(EpisodeReplayBuffer, self).__init__()
-    self.states, self.actions, self.returns_to_go, self.dones = list(), list(), list(), list()
+    self.states, self.actions, self.returns_to_go = list(), list(), list()
     rewards = list()
     def safe_literal_eval(val):
       if pd.isna(val):
@@ -26,7 +26,6 @@ class EpisodeReplayBuffer(Dataset):
       for index, row in chunk.iterrows():
         self.states.append(np.array(row['state']))
         self.actions.append(row['action'])
-        self.dones.append(row['done'])
         rewards.append(row['reward'])
         traj_len += 1
         if row['done'] != 0:
@@ -36,8 +35,7 @@ class EpisodeReplayBuffer(Dataset):
     self.states = np.stack(self.states, axis = 0) # self.states.shape = (sample_num, state_dim)
     self.actions = np.expand_dims(self.actions, axis = -1) # self.actions.shape = (sample_num, 1)
     self.returns_to_go = np.expand_dims(self.returns_to_go, axis = -1) # self.returns_to_go.shape = (sample_num, 1)
-    self.dones = np.expand_dims(self.dones, axis = -1) # self.dones.shape = (sample_num, 1)
-    assert self.states.shape[0] == self.actions.shape[0] == self.returns_to_go.shape[0] == self.dones.shape[0]
+    assert self.states.shape[0] == self.actions.shape[0] == self.returns_to_go.shape[0]
   def discount_cumsum(self, x, gamma = 0.8):
     x = np.array(x)
     discount_cumsum = np.zeros_like(x)
@@ -51,8 +49,7 @@ class EpisodeReplayBuffer(Dataset):
     return {
       'states': self.states[index].astype(np.float32),
       'actions': self.actions[index].astype(np.float32),
-      'returns_to_go': self.returns_to_go[index].astype(np.float32),
-      'dones': self.dones[index]
+      'returns_to_go': self.returns_to_go[index].astype(np.float32)
     }
 
 if __name__ == "__main__":
