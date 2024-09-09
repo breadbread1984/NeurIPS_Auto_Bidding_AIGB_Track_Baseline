@@ -153,7 +153,7 @@ class DecisionKAN(nn.Module):
     # s_t, a_t -> Q(s_t, a_t)
     inputs = torch.cat([states, actions], dim = -1) # inputs.shape = (batch, state_dim + act_dim)
     returns_to_go_pred, regularizer1 = self.Q(inputs) # q_preds.shape = (batch, 1)
-    q_loss = criterion(returns_to_go_pred, returns_to_go)
+    q_loss = self.criterion(returns_to_go_pred, returns_to_go)
     # s_t -> pi(s_t)
     # s_t, pi(s_t) -> Q(s_t, pi(s_t))
     actions_pred, regularizer2 = self.pi(states) # actions_pred.shape = (batch, act_dim)
