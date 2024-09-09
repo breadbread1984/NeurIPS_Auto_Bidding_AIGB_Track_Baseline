@@ -10,7 +10,7 @@ from bisect import bisect
 class EpisodeReplayBuffer(Dataset):
   def __init__(self, csv_path, chunksize = 1000):
     super(EpisodeReplayBuffer, self).__init__()
-    self.states, self.rewards, self.actions, self.returns_to_go, self.dones = list(), list(), list(), list(), list()
+    self.states, self.actions, self.returns_to_go, self.dones = list(), list(), list(), list()
     def safe_literal_eval(val):
       if pd.isna(val):
         return val
@@ -24,7 +24,6 @@ class EpisodeReplayBuffer(Dataset):
       chunk['state'] = chunk['state'].apply(safe_literal_eval)
       for index, row in chunk.iterrows():
         self.states.append(np.array(row['state']))
-        self.rewards.append(row['reward'])
         self.actions.append(row['action'])
         self.dones.append(row['done'])
         traj_len += 1
@@ -33,12 +32,10 @@ class EpisodeReplayBuffer(Dataset):
           self.returns_to_go.extend(returns_to_go.tolist())
           traj_len = 0
     self.states = np.stack(self.states, axis = 0) # self.states.shape = (sample_num, state_dim)
-    self.rewards = np.expand_dims(self.rewards, axis = -1) # self.rewards.shape = (sample_num, 1)
     self.actions = np.expand_dims(self.actions, axis = -1) # self.actions.shape = (sample_num, 1)
     self.returns_to_go = np.expand_dims(self.returns_to_go, axis = -1) # self.returns_to_go.shape = (sample_num, 1)
     self.dones = np.expand_dims(self.dones, axis = -1) # self.dones.shape = (sample_num, 1)
-    assert self.states.shape[0] == self.next_states.shape[0] == self.rewards.shape[0] \
-            == self.actions.shape[0] == self.returns_to_go.shape[0] == self.dones.shape[0]
+    assert self.states.shape[0] == self.actions.shape[0] == self.returns_to_go.shape[0] == self.dones.shape[0]
   def discount_cumsum(self, x, gamma = 0.8):
     x = np.array(x)
     discount_cumsum = np.zeros_like(x)
@@ -51,7 +48,6 @@ class EpisodeReplayBuffer(Dataset):
   def __getitem__(self, index):
     return {
       'states': self.states[index],
-      'rewards': self.rewards[index],
       'actions': self.actions[index],
       'returns_to_go': self.returns_to_go[index],
       'dones': self.dones[index]

@@ -149,7 +149,7 @@ class DecisionKAN(nn.Module):
   def get_action(self, states):
     actions_next = self.forward(states)
     return actions_next
-  def step(self, states, rewards, actions, returns_to_go, dones):
+  def step(self, states, actions, returns_to_go, dones):
     # s_t, a_t -> Q(s_t, a_t)
     inputs = torch.cat([states, actions], dim = -1) # inputs.shape = (batch, state_dim + act_dim)
     returns_to_go_pred, regularizer1 = self.Q(inputs) # q_preds.shape = (batch, 1)
