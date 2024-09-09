@@ -49,9 +49,9 @@ class EpisodeReplayBuffer(Dataset):
     return len(self.states)
   def __getitem__(self, index):
     return {
-      'states': self.states[index].astype(numpy.float32),
-      'actions': self.actions[index].astype(numpy.float32),
-      'returns_to_go': self.returns_to_go[index].astype(numpy.float32),
+      'states': self.states[index].astype(np.float32),
+      'actions': self.actions[index].astype(np.float32),
+      'returns_to_go': self.returns_to_go[index].astype(np.float32),
       'dones': self.dones[index]
     }
 
