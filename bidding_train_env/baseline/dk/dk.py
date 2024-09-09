@@ -69,7 +69,7 @@ class KANLayer(nn.Module):
     # scale_base is updated in backward pass
     # scale_sp is updated in backward pass
     self.grid_x = nn.Parameter(torch.tile(torch.unsqueeze(torch.linspace(start = -1, end = 1, steps = self.grid + 1), dim = 0), (channel_in * channel_out, 1)), requires_grad = False) # samples.shape = (channel_in * channel_out, grid + 1)
-    y = (torch.rand(channel_in * channel_out, self.grid_x.shape[1]) - 1 / 2) * 0.1 / self.grid # y.shape = (channel_in * channel_out, grid + 1)
+    y = (torch.rand(self.grid_x.shape[1], channel_in, channel_out) - 1 / 2) * 0.1 / self.grid # y.shape = (grid + 1, channel_in, channel_out)
     self.coef = nn.Parameter(curve2coef(self.grid_x, y, self.grid_x, k), requires_grad = True) # coef.shape = (channel_in * channel_out, grid + 1)
     self.scale_base = nn.Parameter(torch.ones(1, channel_in * channel_out) * scale_base, requires_grad = base_trainable) # scale_base.shape = (1, channel_in * channel_out)
     self.scale_sp = nn.Parameter(torch.ones(1, channel_in * channel_out) * scale_sp, requires_grad = sp_trainable) # scale_sp.shape = (channel_in * channel_out)
