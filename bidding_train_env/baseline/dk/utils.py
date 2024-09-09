@@ -49,9 +49,9 @@ class EpisodeReplayBuffer(Dataset):
     return len(self.states)
   def __getitem__(self, index):
     return {
-      'states': self.states[index],
-      'actions': self.actions[index],
-      'returns_to_go': self.returns_to_go[index],
+      'states': self.states[index].to(torch.float32),
+      'actions': self.actions[index].to(torch.float32),
+      'returns_to_go': self.returns_to_go[index].to(torch.float32),
       'dones': self.dones[index]
     }
 
