@@ -68,11 +68,19 @@ class KANLayer(nn.Module):
     # coef is updated in both forward & backward pass
     # scale_base is updated in backward pass
     # scale_sp is updated in backward pass
-    self.grid_x = nn.Parameter(torch.tile(torch.unsqueeze(torch.linspace(start = -1, end = 1, steps = self.grid + 1), dim = 0), (channel_in * channel_out, 1)), requires_grad = False) # samples.shape = (channel_in * channel_out, grid + 1)
-    y = (torch.rand(self.grid_x.shape[1], channel_in, channel_out) - 1 / 2) * 0.1 / self.grid # y.shape = (grid + 1, channel_in, channel_out)
-    self.coef = nn.Parameter(curve2coef(self.grid_x, y, self.grid_x, k), requires_grad = True) # coef.shape = (channel_in * channel_out, grid + 1)
-    self.scale_base = nn.Parameter(torch.ones(1, channel_in * channel_out) * scale_base, requires_grad = base_trainable) # scale_base.shape = (1, channel_in * channel_out)
-    self.scale_sp = nn.Parameter(torch.ones(1, channel_in * channel_out) * scale_sp, requires_grad = sp_trainable) # scale_sp.shape = (channel_in * channel_out)
+    def extend_grid(grid, k_extend=0):
+      h = (grid[:, [-1]] - grid[:, [0]]) / (grid.shape[1] - 1)
+
+      for i in range(k_extend):
+        grid = torch.cat([grid[:, [0]] - h, grid], dim=1)
+        grid = torch.cat([grid, grid[:, [-1]] + h], dim=1)
+
+      return grid
+    self.grid_x = nn.Parameter(extend_grid(torch.tile(torch.unsqueeze(torch.linspace(start = -1, end = 1, steps = self.grid + 1), dim = 0), (channel_in, 1)), k_extend = self.k), requires_grad = False) # samples.shape = (channel_in * channel_out, grid + 1)
+    y = (torch.rand(self.grid + 1, channel_in, channel_out) - 1 / 2) * 0.1 / self.grid # y.shape = (grid + 1, channel_in, channel_out)
+    self.coef = nn.Parameter(curve2coef(self.grid_x[:,k:-k].permute(1,0), y, self.grid_x, k), requires_grad = True) # coef.shape = (channel_in * channel_out, grid + 1)
+    self.scale_base = nn.Parameter((torch.rand(channel_in, channel_out)*2-1) * 1 / np.sqrt(channel_in), requires_grad = base_trainable) # scale_base.shape = (1, channel_in * channel_out)
+    self.scale_sp = nn.Parameter(torch.ones(channel_in, channel_out) * scale_sp, requires_grad = sp_trainable) # scale_sp.shape = (channel_in * channel_out)
   def forward(self, x, do_train = False):
     # NOTE: x.shape = (batch, channel_in)
     # every channel is processed by a single activation function (spline)
