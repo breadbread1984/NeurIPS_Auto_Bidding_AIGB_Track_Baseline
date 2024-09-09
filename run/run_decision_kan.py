@@ -33,7 +33,7 @@ def train_model():
     model = DecisionKAN(state_dim = 16, act_dim = 1).to("cuda")
     dataloader = DataLoader(replay_buffer, batch_size = 32, shuffle = True, num_workers = 32)
     model.train()
-    for epoch in range(30):
+    for epoch in range(100):
       i = 0
       for triplet in dataloader:
           states, actions, returns_to_go = triplet['states'].to('cuda'), triplet['actions'].to('cuda'), triplet['returns_to_go'].to('cuda')
