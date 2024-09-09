@@ -3,6 +3,7 @@
 import torch
 from torch.utils.data import Dataset
 import pandas as pd
+import ast
 import numpy as np
 from bisect import bisect
 
@@ -10,11 +11,19 @@ class EpisodeReplayBuffer(Dataset):
   def __init__(self, csv_path, chunksize = 1000):
     super(EpisodeReplayBuffer, self).__init__()
     self.states, self.next_states, self.rewards, self.actions, self.returns_to_go, self.dones = list(), list(), list(), list(), list(), list()
+    def safe_literal_eval(val):
+      if pd.isna(val):
+        return val
+      try:
+        return ast.literal_eval(val)
+      except (ValueError, SyntaxError):
+        print(ValueError)
+        return val
     traj_len = 0
     for chunk in pd.read_csv(csv_path, chunksize = chunksize):
       for index, row in chunk.iterrows():
-        self.states.append(np.array(eval(row['state'])))
-        self.next_states.append(np.array(eval(row['next_state'])))
+        self.states.append(np.array(row['state'].apply(safe_literal_eval)))
+        self.next_states.append(np.array(row['next_state'].apply(safe_literal_eval)))
         self.rewards.append(row['reward'])
         self.actions.append(row['action'])
         self.dones.append(row['done'])
