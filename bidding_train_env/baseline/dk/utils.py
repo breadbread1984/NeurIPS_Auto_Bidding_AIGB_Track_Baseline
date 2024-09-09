@@ -21,9 +21,11 @@ class EpisodeReplayBuffer(Dataset):
         return val
     traj_len = 0
     for chunk in pd.read_csv(csv_path, chunksize = chunksize):
+      chunk['state'] = chunk['state'].apply(safe_literal_eval)
+      chunk['next_state'] = chunk['next_state'].apply(safe_literal_eval)
       for index, row in chunk.iterrows():
-        self.states.append(np.array(row['state'].apply(safe_literal_eval)))
-        self.next_states.append(np.array(row['next_state'].apply(safe_literal_eval)))
+        self.states.append(np.array(row['state']))
+        self.next_states.append(np.array(row['next_state']))
         self.rewards.append(row['reward'])
         self.actions.append(row['action'])
         self.dones.append(row['done'])
