@@ -11,6 +11,7 @@ class EpisodeReplayBuffer(Dataset):
   def __init__(self, csv_path, chunksize = 1000):
     super(EpisodeReplayBuffer, self).__init__()
     self.states, self.actions, self.returns_to_go, self.dones = list(), list(), list(), list()
+    rewards = list()
     def safe_literal_eval(val):
       if pd.isna(val):
         return val
@@ -26,9 +27,10 @@ class EpisodeReplayBuffer(Dataset):
         self.states.append(np.array(row['state']))
         self.actions.append(row['action'])
         self.dones.append(row['done'])
+        rewards.append(row['reward'])
         traj_len += 1
         if row['done'] != 0:
-          returns_to_go = self.discount_cumsum(self.rewards[-traj_len:])
+          returns_to_go = self.discount_cumsum(rewards[-traj_len:])
           self.returns_to_go.extend(returns_to_go.tolist())
           traj_len = 0
     self.states = np.stack(self.states, axis = 0) # self.states.shape = (sample_num, state_dim)
