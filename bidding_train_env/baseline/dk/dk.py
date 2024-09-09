@@ -7,41 +7,50 @@ from torch import nn
 from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
-def b_spline(x, grid, k = 0, extend = True, device = torch.device('cuda')):
-  def extend_grid(grid, k_extend=0):
-    # pad k to left and right
-    # grid shape: (batch, grid)
-    h = (grid[:, [-1]] - grid[:, [0]]) / (grid.shape[1] - 1)
-    for i in range(k_extend):
-      grid = torch.cat([grid[:, [0]] - h, grid], dim=1)
-      grid = torch.cat([grid, grid[:, [-1]] + h], dim=1)
-    grid = grid.to(device)
-    return grid
-  if extend == True:
-     grid = extend_grid(grid, k_extend=k)
-  grid = grid.unsqueeze(dim = 2).to(device)
-  x = x.unsqueeze(dim = 1).to(device)
-  if k == 0:
-    value = (x >= grid[:, :-1]) * (x < grid[:, 1:])
-  else:
-    B_km1 = b_spline(x[:, 0], grid = grid[:, :, 0], k = k - 1, extend = False, device = device)
-    value = (x - grid[:, :-(k + 1)]) / (grid[:, k:-1] - grid[:, :-(k + 1)]) * B_km1[:, :-1] + (grid[:, k + 1:] - x) / (grid[:, k + 1:] - grid[:, 1:(-k)]) * B_km1[:, 1:]
-  return value
+def b_spline(x, grid, k=0, extend=True, device=torch.device('cuda')):
+ 
+    x = x.unsqueeze(dim=2)
+    grid = grid.unsqueeze(dim=0)
+    
+    if k == 0:
+        value = (x >= grid[:, :, :-1]) * (x < grid[:, :, 1:])
+    else:
+        B_km1 = b_spline(x[:,:,0], grid=grid[0], k=k - 1)
+        
+        value = (x - grid[:, :, :-(k + 1)]) / (grid[:, :, k:-1] - grid[:, :, :-(k + 1)]) * B_km1[:, :, :-1] + (
+                    grid[:, :, k + 1:] - x) / (grid[:, :, k + 1:] - grid[:, :, 1:(-k)]) * B_km1[:, :, 1:]
+    
+    # in case grid is degenerate
+    value = torch.nan_to_num(value)
+    return value
 
-def coef2curve(x_eval, grid, coef, k):
-  # get curve(x) values of given x values, curve is defined by coef
-  # x_eval.shape = (spline number, sample number)
-  y_eval = torch.einsum('ij,ijk->ik', coef, b_spline(x_eval, grid, k, device = x_eval.device))
-  # y_eval.shape = (spline number, sample number)
-  return y_eval
+def coef2curve(x_eval, grid, coef, k, device=torch.device('cuda')):
+    
+    b_splines = B_batch(x_eval, grid, k=k)
+    y_eval = torch.einsum('ijk,jlk->ijl', b_splines, coef.to(b_splines.device))
+    
+    return y_eval
 
-def curve2coef(x_eval, y_eval, grid, k):
-  # estimate coef of curve(x) by giving (x,y) samples
-  # x_eval.shape = (spline number, sample number)
-  mat = b_spline(x_eval, grid, k, device = x_eval.device).permute(0, 2, 1)
-  coef = torch.linalg.lstsq(mat, torch.unsqueeze(y_eval, dim = 2), driver = 'gels' if mat.is_cuda else 'gelsy').solution[:,:,0]
-  # coef.shape = (spline number, grid + 1)
-  return coef
+def curve2coef(x_eval, y_eval, grid, k, lamb=1e-8):
+
+    batch = x_eval.shape[0]
+    in_dim = x_eval.shape[1]
+    out_dim = y_eval.shape[2]
+    n_coef = grid.shape[1] - k - 1
+    mat = B_batch(x_eval, grid, k)
+    mat = mat.permute(1,0,2)[:,None,:,:].expand(in_dim, out_dim, batch, n_coef)
+    y_eval = y_eval.permute(1,2,0).unsqueeze(dim=3)
+    device = mat.device
+        
+    XtX = torch.einsum('ijmn,ijnp->ijmp', mat.permute(0,1,3,2), mat)
+    Xty = torch.einsum('ijmn,ijnp->ijmp', mat.permute(0,1,3,2), y_eval)
+    n1, n2, n = XtX.shape[0], XtX.shape[1], XtX.shape[2]
+    identity = torch.eye(n,n)[None, None, :, :].expand(n1, n2, n, n).to(device)
+    A = XtX + lamb * identity
+    B = Xty
+    coef = (A.pinverse() @ B)[:,:,:,0]
+    
+    return coef
 
 class KANLayer(nn.Module):
   def __init__(self, channel_in, channel_out, grid = 5, k = 3, base_fun = 'silu', scale_base = 1.0, scale_sp = 1.0, base_trainable = True, sp_trainable = True, grid_eps = 0.02):
