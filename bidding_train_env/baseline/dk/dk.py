@@ -24,6 +24,23 @@ def b_spline(x, grid, k=0, extend=True, device=torch.device('cuda')):
     value = torch.nan_to_num(value)
     return value
 
+def B_batch(x, grid, k=0, extend=True, device='cpu'):
+    
+    x = x.unsqueeze(dim=2)
+    grid = grid.unsqueeze(dim=0)
+    
+    if k == 0:
+        value = (x >= grid[:, :, :-1]) * (x < grid[:, :, 1:])
+    else:
+        B_km1 = B_batch(x[:,:,0], grid=grid[0], k=k - 1)
+        
+        value = (x - grid[:, :, :-(k + 1)]) / (grid[:, :, k:-1] - grid[:, :, :-(k + 1)]) * B_km1[:, :, :-1] + (
+                    grid[:, :, k + 1:] - x) / (grid[:, :, k + 1:] - grid[:, :, 1:(-k)]) * B_km1[:, :, 1:]
+    
+    # in case grid is degenerate
+    value = torch.nan_to_num(value)
+    return value
+
 def coef2curve(x_eval, grid, coef, k, device=torch.device('cuda')):
     
     b_splines = B_batch(x_eval, grid, k=k)
