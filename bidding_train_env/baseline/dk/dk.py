@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 
 import random
-from os import mkdir
+from os import mkdir, makedirs
 from os.path import join, exists, isdir
+import yaml
 import numpy as np
 import sympy
 import torch
@@ -467,9 +468,9 @@ class KAN(nn.Module):
         
         if auto_save:
             if first_init:
-                if not os.path.exists(ckpt_path):
+                if not exists(ckpt_path):
                     # Create the directory
-                    os.makedirs(ckpt_path)
+                    makedirs(ckpt_path)
                 print(f"checkpoint directory created: {ckpt_path}")
                 print('saving model version 0.0')
 
