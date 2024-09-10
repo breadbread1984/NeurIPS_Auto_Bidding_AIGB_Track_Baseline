@@ -2239,7 +2239,7 @@ class DecisionKAN(nn.Module):
     self.optimizer = Adam(self.parameters(), lr = lr)
     self.scheduler = CosineAnnealingWarmRestarts(self.optimizer, T_0 = 5, T_mult = 2)
   def forward(self, states):
-    actions_next, regularizer = self.pi(states) # actions_next.shape = (batch, 1)
+    actions_next = self.pi(states) # actions_next.shape = (batch, 1)
     return actions_next
   def get_action(self, states):
     actions_next = self.forward(states)
@@ -2247,19 +2247,21 @@ class DecisionKAN(nn.Module):
   def step(self, states, actions, returns_to_go, epoch):
     # s_t, a_t -> Q(s_t, a_t)
     inputs = torch.cat([states, actions], dim = -1) # inputs.shape = (batch, state_dim + act_dim)
+    if epoch % 5 == 0: self.Q.update_grid(inputs)
     returns_to_go_pred = self.Q(inputs) # q_preds.shape = (batch, 1)
     q_loss = self.criterion(returns_to_go_pred, returns_to_go)
     # s_t -> pi(s_t)
     # s_t, pi(s_t) -> Q(s_t, pi(s_t))
+    if epoch % 5 == 0: self.pi.update_grid(states)
     actions_pred = self.pi(states) # actions_pred.shape = (batch, act_dim)
     inputs = torch.cat([states, actions_pred], dim = -1) # inputs.shape = (batch, state_dim + act_dim)
+    if epoch % 5 == 0: self.Q.update_grid(inputs)
     returns_to_go_best = self.Q(inputs) # returns_to_go_best.shape = (batch, 1)
     pi_loss = -torch.mean(returns_to_go_best)
     loss = q_loss + pi_loss
-    if epoch % 5 == 0:
-      regularizer1 = self.Q.get_reg('edge_forward_spline_n', 1., 2., 0., 0.)
-      regularizer2 = self.pi.get_reg('edge_forward_spline_n', 1., 2., 0., 0.)
-      loss += regularizer1 + regularizer2
+    regularizer1 = self.Q.get_reg('edge_forward_spline_n', 1., 2., 0., 0.)
+    regularizer2 = self.pi.get_reg('edge_forward_spline_n', 1., 2., 0., 0.)
+    loss += regularizer1 + regularizer2
     self.optimizer.zero_grad()
     loss.backward()
     nn.utils.clip_grad_norm_(self.parameters(), .25)
