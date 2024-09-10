@@ -44,7 +44,7 @@ def B_batch(x, grid, k=0, extend=True, device='cuda'):
 
 def coef2curve(x_eval, grid, coef, k, device=torch.device('cuda')):
     
-    b_splines = B_batch(x_eval, grid, k=k)
+    b_splines = B_batch(x_eval, grid, k=k).to(device)
     y_eval = torch.einsum('ijk,jlk->ijl', b_splines, coef.to(b_splines.device))
     
     return y_eval
@@ -234,7 +234,7 @@ class KANLayer(nn.Module):
 
 class KAN(nn.Module):
     def __init__(self, width=None, grid=3, k=3, mult_arity = 2, noise_scale=0.3, scale_base_mu=0.0, scale_base_sigma=1.0, base_fun='silu', symbolic_enabled=True, affine_trainable=False, grid_eps=0.02, grid_range=[-1, 1], sp_trainable=True, sb_trainable=True, seed=1, save_act=True, sparse_init=False, auto_save=True, first_init=True, ckpt_path='./model', state_id=0, round=0, device='cpu'):
-        super(MultKAN, self).__init__()
+        super(KAN, self).__init__()
 
         torch.manual_seed(seed)
         np.random.seed(seed)
@@ -2155,10 +2155,11 @@ class DecisionKAN(nn.Module):
 
 if __name__ == "__main__":
   layer = KANLayer(3,2)
-  inputs = torch.randn(2048, 3)
+  inputs = torch.randn(2048, 3).to('cuda')
   y, preacts, postacts, postspline = layer(inputs)
   print(y.shape, preacts.shape, postacts.shape, postspline.shape)
-  kan = KAN(channels = (1331, 4, 1))
+  kan = KAN(width = (1331, 4, 1), grid = 5, k = 3)
+  kan = kan.to('cuda')
   inputs = torch.randn(2048, 1331)
   y = kan(inputs)
   print(y.shape)
