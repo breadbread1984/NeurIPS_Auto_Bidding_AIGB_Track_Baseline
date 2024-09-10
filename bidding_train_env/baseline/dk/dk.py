@@ -2,6 +2,7 @@
 
 from os import mkdir
 from os.path import join, exists, isdir
+import numpy as np
 import torch
 from torch import nn
 from torch.optim import Adam
@@ -24,7 +25,7 @@ def b_spline(x, grid, k=0, extend=True, device=torch.device('cuda')):
     value = torch.nan_to_num(value)
     return value
 
-def B_batch(x, grid, k=0, extend=True, device='cpu'):
+def B_batch(x, grid, k=0, extend=True, device='cuda'):
     
     x = x.unsqueeze(dim=2)
     grid = grid.unsqueeze(dim=0)
