@@ -2253,7 +2253,7 @@ class DecisionKAN(nn.Module):
     # s_t, pi(s_t) -> Q(s_t, pi(s_t))
     actions_pred = self.pi(states) # actions_pred.shape = (batch, act_dim)
     inputs = torch.cat([states, actions_pred], dim = -1) # inputs.shape = (batch, state_dim + act_dim)
-    returns_to_go_best = self.Q(inputs, do_train = True if epoch % 5 == 0 else False) # returns_to_go_best.shape = (batch, 1)
+    returns_to_go_best = self.Q(inputs) # returns_to_go_best.shape = (batch, 1)
     pi_loss = -torch.mean(returns_to_go_best)
     loss = q_loss + pi_loss
     if epoch % 5 == 0:
