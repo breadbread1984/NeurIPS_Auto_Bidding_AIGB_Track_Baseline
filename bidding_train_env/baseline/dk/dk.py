@@ -2244,18 +2244,18 @@ class DecisionKAN(nn.Module):
   def get_action(self, states):
     actions_next = self.forward(states)
     return actions_next
-  def step(self, states, actions, returns_to_go, epoch):
+  def step(self, states, actions, returns_to_go, step):
     # s_t, a_t -> Q(s_t, a_t)
     inputs = torch.cat([states, actions], dim = -1) # inputs.shape = (batch, state_dim + act_dim)
-    if epoch % 5 == 0: self.Q.update_grid(inputs)
+    if step % 5 == 0 and step < 50: self.Q.update_grid(inputs)
     returns_to_go_pred = self.Q(inputs) # q_preds.shape = (batch, 1)
     q_loss = self.criterion(returns_to_go_pred, returns_to_go)
     # s_t -> pi(s_t)
     # s_t, pi(s_t) -> Q(s_t, pi(s_t))
-    if epoch % 5 == 0: self.pi.update_grid(states)
+    if step % 5 == 0 and step < 50: self.pi.update_grid(states)
     actions_pred = self.pi(states) # actions_pred.shape = (batch, act_dim)
     inputs = torch.cat([states, actions_pred], dim = -1) # inputs.shape = (batch, state_dim + act_dim)
-    if epoch % 5 == 0: self.Q.update_grid(inputs)
+    if step % 5 == 0 and step < 50: self.Q.update_grid(inputs)
     returns_to_go_best = self.Q(inputs) # returns_to_go_best.shape = (batch, 1)
     pi_loss = -torch.mean(returns_to_go_best)
     loss = q_loss + pi_loss

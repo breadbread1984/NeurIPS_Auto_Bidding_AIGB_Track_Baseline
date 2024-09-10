@@ -35,9 +35,9 @@ def train_model():
     model.train()
     for epoch in range(100):
       i = 0
-      for triplet in dataloader:
+      for step, triplet in enumerate(dataloader):
           states, actions, returns_to_go = triplet['states'].to('cuda'), triplet['actions'].to('cuda'), triplet['returns_to_go'].to('cuda')
-          train_loss = model.step(states, actions, returns_to_go, epoch)
+          train_loss = model.step(states, actions, returns_to_go, epoch * len(dataloader) + step)
           i += 1
           logger.info(f"Epoch: {epoch} Step: {i} Action loss: {np.mean(train_loss)}")
       model.scheduler.step()
