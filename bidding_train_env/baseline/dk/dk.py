@@ -4,6 +4,7 @@ import random
 from os import mkdir
 from os.path import join, exists, isdir
 import numpy as np
+import sympy
 import torch
 from torch import nn
 from torch.optim import Adam
@@ -233,6 +234,135 @@ class KANLayer(nn.Module):
             swap_(self.scale_sp.data, i1, i2, mode=mode)
             swap_(self.mask.data, i1, i2, mode=mode)
 
+class Symbolic_KANLayer(nn.Module):
+    def __init__(self, in_dim=3, out_dim=2, device='cpu'):
+        super(Symbolic_KANLayer, self).__init__()
+        self.out_dim = out_dim
+        self.in_dim = in_dim
+        self.mask = torch.nn.Parameter(torch.zeros(out_dim, in_dim, device=device)).requires_grad_(False)
+        # torch
+        self.funs = [[lambda x: x*0. for i in range(self.in_dim)] for j in range(self.out_dim)]
+        self.funs_avoid_singularity = [[lambda x, y_th: ((), x*0.) for i in range(self.in_dim)] for j in range(self.out_dim)]
+        # name
+        self.funs_name = [['0' for i in range(self.in_dim)] for j in range(self.out_dim)]
+        # sympy
+        self.funs_sympy = [[lambda x: x*0. for i in range(self.in_dim)] for j in range(self.out_dim)]
+        ### make funs_name the only parameter, and make others as the properties of funs_name?
+        
+        self.affine = torch.nn.Parameter(torch.zeros(out_dim, in_dim, 4, device=device))
+        # c*f(a*x+b)+d
+        
+        self.device = device
+        self.to(device)
+        
+    def to(self, device):
+        '''
+        move to device
+        '''
+        super(Symbolic_KANLayer, self).to(device)
+        self.device = device    
+        return self
+    
+    def forward(self, x, singularity_avoiding=False, y_th=10.):
+        batch = x.shape[0]
+        postacts = []
+
+        for i in range(self.in_dim):
+            postacts_ = []
+            for j in range(self.out_dim):
+                if singularity_avoiding:
+                    xij = self.affine[j,i,2]*self.funs_avoid_singularity[j][i](self.affine[j,i,0]*x[:,[i]]+self.affine[j,i,1], torch.tensor(y_th))[1]+self.affine[j,i,3]
+                else:
+                    xij = self.affine[j,i,2]*self.funs[j][i](self.affine[j,i,0]*x[:,[i]]+self.affine[j,i,1])+self.affine[j,i,3]
+                postacts_.append(self.mask[j][i]*xij)
+            postacts.append(torch.stack(postacts_))
+
+        postacts = torch.stack(postacts)
+        postacts = postacts.permute(2,1,0,3)[:,:,:,0]
+        y = torch.sum(postacts, dim=2)
+        
+        return y, postacts
+        
+        
+    def get_subset(self, in_id, out_id):
+        sbb = Symbolic_KANLayer(self.in_dim, self.out_dim, device=self.device)
+        sbb.in_dim = len(in_id)
+        sbb.out_dim = len(out_id)
+        sbb.mask.data = self.mask.data[out_id][:,in_id]
+        sbb.funs = [[self.funs[j][i] for i in in_id] for j in out_id]
+        sbb.funs_avoid_singularity = [[self.funs_avoid_singularity[j][i] for i in in_id] for j in out_id]
+        sbb.funs_sympy = [[self.funs_sympy[j][i] for i in in_id] for j in out_id]
+        sbb.funs_name = [[self.funs_name[j][i] for i in in_id] for j in out_id]
+        sbb.affine.data = self.affine.data[out_id][:,in_id]
+        return sbb
+    
+    
+    def fix_symbolic(self, i, j, fun_name, x=None, y=None, random=False, a_range=(-10,10), b_range=(-10,10), verbose=True):
+        if isinstance(fun_name,str):
+            fun = SYMBOLIC_LIB[fun_name][0]
+            fun_sympy = SYMBOLIC_LIB[fun_name][1]
+            fun_avoid_singularity = SYMBOLIC_LIB[fun_name][3]
+            self.funs_sympy[j][i] = fun_sympy
+            self.funs_name[j][i] = fun_name
+            
+            if x == None or y == None:
+                #initialzie from just fun
+                self.funs[j][i] = fun
+                self.funs_avoid_singularity[j][i] = fun_avoid_singularity
+                if random == False:
+                    self.affine.data[j][i] = torch.tensor([1.,0.,1.,0.], device=self.device)
+                else:
+                    self.affine.data[j][i] = torch.rand(4, device=self.device) * 2 - 1
+                return None
+            else:
+                #initialize from x & y and fun
+                params, r2 = fit_params(x,y,fun, a_range=a_range, b_range=b_range, verbose=verbose, device=self.device)
+                self.funs[j][i] = fun
+                self.funs_avoid_singularity[j][i] = fun_avoid_singularity
+                self.affine.data[j][i] = params
+                return r2
+        else:
+            # if fun_name itself is a function
+            fun = fun_name
+            fun_sympy = fun_name
+            self.funs_sympy[j][i] = fun_sympy
+            self.funs_name[j][i] = "anonymous"
+
+            self.funs[j][i] = fun
+            self.funs_avoid_singularity[j][i] = fun
+            if random == False:
+                self.affine.data[j][i] = torch.tensor([1.,0.,1.,0.], device=self.device)
+            else:
+                self.affine.data[j][i] = torch.rand(4, device=self.device) * 2 - 1
+            return None
+        
+    def swap(self, i1, i2, mode='in'):
+        '''
+        swap the i1 neuron with the i2 neuron in input (if mode == 'in') or output (if mode == 'out') 
+        '''
+        with torch.no_grad():
+            def swap_list_(data, i1, i2, mode='in'):
+
+                if mode == 'in':
+                    for j in range(self.out_dim):
+                        data[j][i1], data[j][i2] = data[j][i2], data[j][i1]
+
+                elif mode == 'out':
+                    data[i1], data[i2] = data[i2], data[i1] 
+
+            def swap_(data, i1, i2, mode='in'):
+                if mode == 'in':
+                    data[:,i1], data[:,i2] = data[:,i2].clone(), data[:,i1].clone()
+
+                elif mode == 'out':
+                    data[i1], data[i2] = data[i2].clone(), data[i1].clone()
+
+            swap_list_(self.funs_name,i1,i2,mode)
+            swap_list_(self.funs_sympy,i1,i2,mode)
+            swap_list_(self.funs_avoid_singularity,i1,i2,mode)
+            swap_(self.affine.data,i1,i2,mode)
+            swap_(self.mask.data,i1,i2,mode)
+
 class KAN(nn.Module):
     def __init__(self, width=None, grid=3, k=3, mult_arity = 2, noise_scale=0.3, scale_base_mu=0.0, scale_base_sigma=1.0, base_fun='silu', symbolic_enabled=True, affine_trainable=False, grid_eps=0.02, grid_range=[-1, 1], sp_trainable=True, sb_trainable=True, seed=1, save_act=True, sparse_init=False, auto_save=True, first_init=True, ckpt_path='./model', state_id=0, round=0, device='cpu'):
         super(KAN, self).__init__()
@@ -354,7 +484,7 @@ class KAN(nn.Module):
         self.input_id = torch.arange(self.width_in[0],)
         
     def to(self, device):
-        super(MultKAN, self).to(device)
+        super(KAN, self).to(device)
         self.device = device
         
         for kanlayer in self.act_fun:
@@ -463,7 +593,7 @@ class KAN(nn.Module):
 
     
     def refine(self, new_grid):
-        model_new = MultKAN(width=self.width, 
+        model_new = KAN(width=self.width, 
                      grid=new_grid, 
                      k=self.k, 
                      mult_arity=self.mult_arity, 
@@ -529,7 +659,7 @@ class KAN(nn.Module):
 
         state = torch.load(f'{path}_state')
 
-        model_load = MultKAN(width=config['width'], 
+        model_load = KAN(width=config['width'], 
                      grid=config['grid'], 
                      k=config['k'], 
                      mult_arity = config['mult_arity'], 
@@ -581,11 +711,11 @@ class KAN(nn.Module):
         
         print('rewind to model version '+f'{self.round-1}.{self.state_id}'+', renamed as '+f'{self.round}.{self.state_id}')
 
-        return MultKAN.loadckpt(path=self.ckpt_path+'/'+str(model_id))
+        return KAN.loadckpt(path=self.ckpt_path+'/'+str(model_id))
     
     
     def checkout(self, model_id):
-        return MultKAN.loadckpt(path=self.ckpt_path+'/'+str(model_id))
+        return KAN.loadckpt(path=self.ckpt_path+'/'+str(model_id))
     
     def update_grid_from_samples(self, x):
         for l in range(self.depth):
@@ -1290,7 +1420,7 @@ class KAN(nn.Module):
                 if i not in active_neurons_down[l]:
                     self.remove_node(l + 1, i, mode='down',log_history=False)
 
-        model2 = MultKAN(copy.deepcopy(self.width), grid=self.grid, k=self.k, base_fun=self.base_fun_name, mult_arity=self.mult_arity, ckpt_path=self.ckpt_path, auto_save=True, first_init=False, state_id=self.state_id, round=self.round).to(self.device)
+        model2 = KAN(copy.deepcopy(self.width), grid=self.grid, k=self.k, base_fun=self.base_fun_name, mult_arity=self.mult_arity, ckpt_path=self.ckpt_path, auto_save=True, first_init=False, state_id=self.state_id, round=self.round).to(self.device)
         model2.load_state_dict(self.state_dict())
         
         width_new = [self.width[0]]
@@ -1367,7 +1497,7 @@ class KAN(nn.Module):
         else:
             input_id = torch.tensor(active_inputs, dtype=torch.long).to(self.device)
         
-        model2 = MultKAN(copy.deepcopy(self.width), grid=self.grid, k=self.k, base_fun=self.base_fun, mult_arity=self.mult_arity, ckpt_path=self.ckpt_path, auto_save=True, first_init=False, state_id=self.state_id, round=self.round).to(self.device)
+        model2 = KAN(copy.deepcopy(self.width), grid=self.grid, k=self.k, base_fun=self.base_fun, mult_arity=self.mult_arity, ckpt_path=self.ckpt_path, auto_save=True, first_init=False, state_id=self.state_id, round=self.round).to(self.device)
         model2.load_state_dict(self.state_dict())
 
         model2.act_fun[0] = model2.act_fun[0].get_subset(input_id, torch.arange(self.width_out[1]))
