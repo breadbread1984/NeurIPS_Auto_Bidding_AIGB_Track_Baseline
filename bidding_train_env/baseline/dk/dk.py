@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import random
 from os import mkdir
 from os.path import join, exists, isdir
 import numpy as np
@@ -2101,8 +2102,8 @@ class DecisionKAN(nn.Module):
   def __init__(self, state_dim, act_dim, gamma = 0.8, lr = 1e-4):
     super(DecisionKAN, self).__init__()
     self.gamma = gamma
-    self.Q = KAN(channels = [state_dim + act_dim, 8, 4, 1], grid = 7, k = 3, noise_scale = 0.3, seed = 2)
-    self.pi = KAN(channels = [state_dim, 8, 4, act_dim], grid = 7, k = 3, noise_scale = 0.3, seed = 2)
+    self.Q = KAN(width = [state_dim + act_dim, 8, 4, 1], grid = 7, k = 3, noise_scale = 0.3, seed = 2)
+    self.pi = KAN(width = [state_dim, 8, 4, act_dim], grid = 7, k = 3, noise_scale = 0.3, seed = 2)
     self.criterion = nn.MSELoss()
     self.optimizer = Adam(self.parameters(), lr = lr)
     self.scheduler = CosineAnnealingWarmRestarts(self.optimizer, T_0 = 5, T_mult = 2)
@@ -2158,7 +2159,7 @@ if __name__ == "__main__":
   inputs = torch.randn(2048, 3).to('cuda')
   y, preacts, postacts, postspline = layer(inputs)
   print(y.shape, preacts.shape, postacts.shape, postspline.shape)
-  kan = KAN(width = (1331, 4, 1), grid = 5, k = 3)
+  kan = KAN(width = [1331, 4, 1], grid = 5, k = 3)
   kan = kan.to('cuda')
   inputs = torch.randn(2048, 1331)
   y = kan(inputs)
