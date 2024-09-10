@@ -52,6 +52,18 @@ def curve2coef(x_eval, y_eval, grid, k, lamb=1e-8):
     
     return coef
 
+def extend_grid(grid, k_extend=0):
+    '''
+    extend grid
+    '''
+    h = (grid[:, [-1]] - grid[:, [0]]) / (grid.shape[1] - 1)
+
+    for i in range(k_extend):
+        grid = torch.cat([grid[:, [0]] - h, grid], dim=1)
+        grid = torch.cat([grid, grid[:, [-1]] + h], dim=1)
+
+    return grid
+
 def sparse_mask(in_dim, out_dim):
     '''
     get sparse mask
@@ -2130,7 +2142,7 @@ if __name__ == "__main__":
   print(y.shape, preacts.shape, postacts.shape, postspline.shape)
   kan = KAN(channels = (1331, 4, 1))
   inputs = torch.randn(2048, 1331)
-  y = kan(inputs, do_train = False)
+  y = kan(inputs)
   print(y.shape)
   torch.save(kan, 'kan.torch')
   print(kan.parameters())
