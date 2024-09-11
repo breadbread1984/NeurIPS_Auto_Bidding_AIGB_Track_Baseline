@@ -2245,7 +2245,7 @@ class DecisionKAN(nn.Module):
     states = torch.Tensor(states).to(torch.float32)
     states = torch.unsqueeze(states, dim = 0).to(self.pi.device) # states.shape = (batch, act_dim)
     actions_next = self.forward(states)
-    actions_next = actions_next.cpu().numpy()[0]
+    actions_next = actions_next.detach().cpu().numpy()[0]
     return actions_next
   def step(self, states, actions, returns_to_go, step):
     # s_t, a_t -> Q(s_t, a_t)
