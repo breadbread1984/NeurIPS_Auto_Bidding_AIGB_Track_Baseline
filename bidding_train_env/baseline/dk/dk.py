@@ -2236,7 +2236,7 @@ class DecisionKAN(nn.Module):
     self.Q = KAN(width = [state_dim + act_dim, 8, 4, 1], grid = 7, k = 3, noise_scale = 0.3, seed = 2)
     self.pi = KAN(width = [state_dim, 8, 4, act_dim], grid = 7, k = 3, noise_scale = 0.3, seed = 2)
     self.criterion = nn.MSELoss()
-    self.optimizer = Adam(self.parameters(), lr = lr)
+    self.optimizer = Adam(list(self.Q.parameters()) + list(self.pi.parameters()), lr = lr)
     self.scheduler = CosineAnnealingWarmRestarts(self.optimizer, T_0 = 5, T_mult = 2)
   def forward(self, states):
     actions_next = self.pi(states) # actions_next.shape = (batch, act_dim)
@@ -2267,7 +2267,6 @@ class DecisionKAN(nn.Module):
     loss += regularizer1 + regularizer2
     self.optimizer.zero_grad()
     loss.backward()
-    nn.utils.clip_grad_norm_(self.parameters(), .25)
     self.optimizer.step()
     return loss.detach().cpu().item()
   def take_actions(self, state):
@@ -2284,7 +2283,7 @@ class DecisionKAN(nn.Module):
       mkdir(save_path)
     jit_model = torch.jit.script(self.cpu())
     torch.jit.save(jit_model, f'{save_path}/dk_model.pth')
-  def load_net(self, load_path = 'save_model/DKtest', device = 'cpu'):
+  def load_net(self, load_path = 'save_model/DKtest/dk.pt', device = 'cpu'):
     file_path = load_path
     self.load_state_dict(torch.load(file_path, map_location = device))
     print(f"Model loaded from {device}.")
