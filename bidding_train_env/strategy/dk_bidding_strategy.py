@@ -16,7 +16,7 @@ class DkBiddingStrategy(BaseBiddingStrategy):
     file_name = dirname(realpath(__file__))
     dir_name = dirname(file_name)
     dir_name = dirname(dir_name)
-    model_path = join(dir_name, "saved_model", "DKtest", "dk.pt")
+    model_path = join(dir_name, "save_model", "DKtest", "dk.pt")
     self.model = DecisionKAN(state_dim = 16, act_dim = 1)
     self.model.load_net(model_path)
   def reset(self):
