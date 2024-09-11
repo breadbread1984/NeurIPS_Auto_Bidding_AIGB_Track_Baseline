@@ -2257,7 +2257,7 @@ class DecisionKAN(nn.Module):
     q_loss = self.criterion(returns_to_go_pred, returns_to_go)
     # s_t -> pi(s_t)
     # s_t, pi(s_t) -> Q(s_t, pi(s_t))
-    if step % 5 == 0 and step < 50: self.pi.update_grid(states)
+    if step % 5 == 0 and step < 50: self.pi[0].update_grid(states)
     actions_pred = self.pi(states) # actions_pred.shape = (batch, act_dim)
     inputs = torch.cat([states, actions_pred], dim = -1) # inputs.shape = (batch, state_dim + act_dim)
     if step % 5 == 0 and step < 50: self.Q.update_grid(inputs)
