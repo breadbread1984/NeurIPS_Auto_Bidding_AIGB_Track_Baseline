@@ -2265,7 +2265,7 @@ class DecisionKAN(nn.Module):
     pi_loss = -torch.mean(returns_to_go_best)
     loss = q_loss + pi_loss
     regularizer1 = self.Q.get_reg('edge_forward_spline_n', 1., 2., 0., 0.)
-    regularizer2 = self.pi.get_reg('edge_forward_spline_n', 1., 2., 0., 0.)
+    regularizer2 = self.pi[0].get_reg('edge_forward_spline_n', 1., 2., 0., 0.)
     loss += regularizer1 + regularizer2
     self.optimizer.zero_grad()
     loss.backward()
