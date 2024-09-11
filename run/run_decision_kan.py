@@ -30,7 +30,7 @@ def train_model():
         datasets.append(replay_buffer)
     replay_buffer = ConcatDataset(datasets)
     logger.info(f"Replay buffer size: {len(replay_buffer)}")
-    model = DecisionKAN(state_dim = 16, act_dim = 1).to("cuda")
+    model = DecisionKAN(state_dim = 16, act_dim = 1, lr = 1e-2).to("cuda")
     if exists(join('save_model','DKtest','dk.pt')):
       model.load_net(join('save_model', 'DKtest', 'dk.pt'), "cuda")
     dataloader = DataLoader(replay_buffer, batch_size = 4550, shuffle = True, num_workers = 256)
