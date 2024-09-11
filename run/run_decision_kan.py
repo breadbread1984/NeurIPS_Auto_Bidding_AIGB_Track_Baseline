@@ -40,6 +40,7 @@ def train_model():
           train_loss = model.step(states, actions, returns_to_go, epoch * len(dataloader) + step)
           i += 1
           logger.info(f"Epoch: {epoch} Step: {i} Action loss: {np.mean(train_loss)}")
+          if step % 1000 == 0: model.save_net("save_model/DKtest")
       model.scheduler.step()
       model.save_net("save_model/DKtest")
 
