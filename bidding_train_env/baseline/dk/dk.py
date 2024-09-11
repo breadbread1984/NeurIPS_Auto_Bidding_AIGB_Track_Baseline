@@ -2239,10 +2239,13 @@ class DecisionKAN(nn.Module):
     self.optimizer = Adam(self.parameters(), lr = lr)
     self.scheduler = CosineAnnealingWarmRestarts(self.optimizer, T_0 = 5, T_mult = 2)
   def forward(self, states):
-    actions_next = self.pi(states) # actions_next.shape = (batch, 1)
+    actions_next = self.pi(states) # actions_next.shape = (batch, act_dim)
     return actions_next
   def get_action(self, states):
+    states = torch.Tensor(states).to(torch.float32)
+    states = torch.unsqueeze(states, dim = 0) # states.shape = (batch, act_dim)
     actions_next = self.forward(states)
+    actions_next = actions_next.cpu().numpy()[0]
     return actions_next
   def step(self, states, actions, returns_to_go, step):
     # s_t, a_t -> Q(s_t, a_t)
