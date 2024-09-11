@@ -2285,7 +2285,7 @@ class DecisionKAN(nn.Module):
   def load_net(self, load_path = 'save_model/DKtest', device = 'cpu'):
     file_path = load_path
     self.load_state_dict(torch.load(file_path, map_location = device))
-    print(f"Model loaded from {self.device}.")
+    print(f"Model loaded from {device}.")
 
 if __name__ == "__main__":
   layer = KANLayer(3,2)
