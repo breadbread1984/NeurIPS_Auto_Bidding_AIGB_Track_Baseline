@@ -47,7 +47,7 @@ def B_batch(x, grid, k=0, extend=True, device='cuda'):
 
 def coef2curve(x_eval, grid, coef, k, device=torch.device('cuda')):
     
-    b_splines = B_batch(x_eval, grid, k=k).to(device)
+    b_splines = B_batch(x_eval, grid, k=k).to(x_eval.device)
     y_eval = torch.einsum('ijk,jlk->ijl', b_splines, coef.to(b_splines.device))
     
     return y_eval
