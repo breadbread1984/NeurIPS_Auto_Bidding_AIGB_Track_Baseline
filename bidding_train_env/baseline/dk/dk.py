@@ -2273,7 +2273,6 @@ class DecisionKAN(nn.Module):
   def take_actions(self, state):
     self.eval()
     action = self.get_action(state)
-    action = action.detach().cpu().numpy()
     return action
   def save_net(self, save_path):
     if not exists(save_path):
