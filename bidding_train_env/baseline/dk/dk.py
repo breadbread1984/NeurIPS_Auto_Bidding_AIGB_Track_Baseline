@@ -2282,7 +2282,7 @@ class DecisionKAN(nn.Module):
       mkdir(save_path)
     jit_model = torch.jit.script(self.cpu())
     torch.jit.save(jit_model, f'{save_path}/dk_model.pth')
-  def load_net(self, load_path = 'saved_model/DKtest', device = 'cpu'):
+  def load_net(self, load_path = 'save_model/DKtest', device = 'cpu'):
     file_path = load_path
     self.load_state_dict(torch.load(file_path, map_location = device))
     print(f"Model loaded from {self.device}.")
