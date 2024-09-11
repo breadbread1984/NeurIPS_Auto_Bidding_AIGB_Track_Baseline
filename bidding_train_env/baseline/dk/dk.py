@@ -2234,7 +2234,9 @@ class DecisionKAN(nn.Module):
     super(DecisionKAN, self).__init__()
     self.gamma = gamma
     self.Q = KAN(width = [state_dim + act_dim, 8, 4, 1], grid = 7, k = 3, noise_scale = 0.3, seed = 2)
-    self.pi = KAN(width = [state_dim, 8, 4, act_dim], grid = 7, k = 3, noise_scale = 0.3, seed = 2)
+    self.pi = nn.Sequential(
+      KAN(width = [state_dim, 8, 4, act_dim], grid = 7, k = 3, noise_scale = 0.3, seed = 2),
+      nn.ReLU())
     self.criterion = nn.MSELoss()
     self.optimizer = Adam(list(self.Q.parameters()) + list(self.pi.parameters()), lr = lr)
     self.scheduler = CosineAnnealingWarmRestarts(self.optimizer, T_0 = 5, T_mult = 2)
